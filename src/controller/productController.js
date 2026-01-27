@@ -34,7 +34,7 @@ exports.createProduct = async (req, res) => {
       return res.status(403).json({ msg: "Only admins can add products" });
     }
 
-    const { title, description, price, costPrice, currency, stock, categories, sku, club } = req.body;
+    const { title, description, price, currency, stock, categories, sku, club } = req.body;
 
     if (!title || !price || stock === undefined) {
       return res.status(400).json({ msg: "Missing required fields" });
@@ -56,7 +56,6 @@ exports.createProduct = async (req, res) => {
       slug,
       description,
       price: parseFloat(price),
-      costPrice: costPrice ? parseFloat(costPrice) : 0,
       currency,
       stock: parseInt(stock),
       categories: categories ? categories.split(",").map((c) => c.trim()) : [],
@@ -84,13 +83,12 @@ exports.updateProduct = async (req, res) => {
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ msg: "Product not found" });
 
-    const { title, description, price, costPrice, currency, stock, categories, sku, club } = req.body;
+    const { title, description, price, currency, stock, categories, sku, club } = req.body;
 
     // Update basic fields
     if (title) product.title = title;
     if (description) product.description = description;
     if (price) product.price = parseFloat(price);
-    if (costPrice !== undefined) product.costPrice = parseFloat(costPrice);
     if (currency) product.currency = currency;
     if (stock !== undefined) product.stock = parseInt(stock);
     if (sku) product.sku = sku;

@@ -6,7 +6,6 @@ const productSchema = new Schema({
   slug: { type: String, index: true },
   description: String,
   price: { type: Number, required: true },
-  costPrice: { type: Number, default: 0 }, // Cost price for profit calculations
   currency: { type: String, default: 'NPR' },
   images: [String],
   stock: { type: Number, default: 0 },

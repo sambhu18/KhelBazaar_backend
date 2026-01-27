@@ -45,7 +45,7 @@ exports.Login = async (req, res) => {
         if (!isMatch) return res.status(400).json({ msg: "Invalid Password" });
         if (!user.verified) return res.status(400).json({ msg: "Please verify your email first" });
         const token = generateToken(user._id);
-        res.status(201).json({ msg: "Login Sucessful", token });
+        res.status(201).json({ msg: "Login Sucessful", token, role: user.role, userId: user._id });
     }
     catch (err) {
         res.status(500).json({ msg: "Server error", error: err });
