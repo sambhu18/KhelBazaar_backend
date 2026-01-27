@@ -11,6 +11,7 @@ const productSchema = new Schema({
   stock: { type: Number, default: 0 },
   club: { type: Schema.Types.ObjectId, ref: 'Club' },
   categories: [String],
+  sizes: [String],
   sku: String,
   digitalId: String, // for authenticity / product passport
   createdAt: { type: Date, default: Date.now }
