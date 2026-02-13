@@ -19,6 +19,9 @@ const protect = async (req, res, next) => {
     }
 };
 
+// Alternative name for the same function (used in new routers)
+const verifyToken = protect;
+
 const authorizeRoles = (...roles) => {
     return (req, res, next) => {
         if (!roles.includes(req.user.role)) {
@@ -28,4 +31,20 @@ const authorizeRoles = (...roles) => {
     };
 };
 
-module.exports = { protect, authorizeRoles };
+// Optional auth middleware (doesn't require token)
+const optionalAuth = async (req, res, next) => {
+    let token;
+    if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
+        try {
+            token = req.headers.authorization.split(" ")[1];
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            req.user = await User.findById(decoded.id).select("-password");
+            req.userId = decoded.id;
+        } catch (err) {
+            // Continue without authentication
+        }
+    }
+    next();
+};
+
+module.exports = { protect, verifyToken, authorizeRoles, optionalAuth };

@@ -7,23 +7,47 @@ const {
   updateProduct,
   deleteProduct,
   getProductsByCategory,
+  getProductDiscovery,
+  moderateProduct,
+  getProductVariants,
+  searchProducts
 } = require("../controller/productController");
-const authMiddleware = require("../middleware/authMiddleware");
+const { verifyToken } = require("../middleware/authMiddleware");
 const multer = require("multer");
+const { storage } = require("../config/cloudinary");
 const path = require("path");
 
-const { storage } = require("../config/cloudinary");
+// Configure multer for product images
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  fileFilter: function (req, file, cb) {
+    const allowedTypes = /jpeg|jpg|png|gif|webp/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
 
-const upload = multer({ storage: storage });
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error("Only image files are allowed"));
+    }
+  },
+});
 
-// Routes
-router.get("/", getAllProducts);
-router.get("/category/:category", getProductsByCategory);
-router.get("/:id", getProductById);
+// Public routes
+router.get("/", getAllProducts); // Get all products with filtering
+router.get("/discovery", getProductDiscovery); // Get discovery feed (trending, new, recommendations)
+router.get("/search", searchProducts); // Search products
+router.get("/category/:category", getProductsByCategory); // Get products by category
+router.get("/:id", getProductById); // Get single product with reviews and related
+router.get("/:id/variants", getProductVariants); // Get product variants and stock
 
-// Protected routes (Admin only)
-router.post("/", authMiddleware.protect, authMiddleware.authorizeRoles("admin"), upload.array("images"), createProduct);
-router.put("/:id", authMiddleware.protect, authMiddleware.authorizeRoles("admin"), upload.array("images"), updateProduct);
-router.delete("/:id", authMiddleware.protect, authMiddleware.authorizeRoles("admin"), deleteProduct);
+// Protected routes (Admin and Vendors)
+router.post("/", verifyToken, upload.array("images", 10), createProduct); // Create product
+router.put("/:id", verifyToken, upload.array("images", 10), updateProduct); // Update product
+router.delete("/:id", verifyToken, deleteProduct); // Delete product
+
+// Admin only routes
+router.put("/:id/moderate", verifyToken, moderateProduct); // Approve/reject products
 
 module.exports = router;

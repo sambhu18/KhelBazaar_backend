@@ -12,18 +12,10 @@ const {
 } = require("../controller/clubPostController");
 const { protect } = require("../middleware/authMiddleware");
 const multer = require("multer");
+const { storage } = require("../config/cloudinary");
 const path = require("path");
 
 // Multer configuration for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/");
-  },
-  filename: (req, file, cb) => {
-    cb(null, "post-" + Date.now() + path.extname(file.originalname));
-  },
-});
-
 const upload = multer({
   storage: storage,
   fileFilter: (req, file, cb) => {
