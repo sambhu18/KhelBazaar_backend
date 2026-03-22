@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
 const clubPostSchema = new Schema({
-  clubId: { type: Schema.Types.ObjectId, ref: "Club", required: true },
+  clubId: { type: Schema.Types.ObjectId, ref: "Club" },
   createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
   postType: {
     type: String,

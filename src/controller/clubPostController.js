@@ -5,7 +5,7 @@ const User = require("../models/User");
 // Get all club posts (with filters)
 exports.getAllPosts = async (req, res) => {
   try {
-    const { category, postType, clubId, status } = req.query;
+    const { category, postType, clubId, status, sort } = req.query;
     let filter = {};
 
     if (category) filter.category = category;
@@ -14,10 +14,13 @@ exports.getAllPosts = async (req, res) => {
     if (status) filter.status = status;
     else filter.status = "active"; // Default to active
 
+    let sortOption = { createdAt: -1 };
+    if (sort === "likes") sortOption = { likes: -1, createdAt: -1 };
+
     const posts = await ClubPost.find(filter)
       .populate("clubId", "name logo")
       .populate("createdBy", "name avatar")
-      .sort({ createdAt: -1 });
+      .sort(sortOption);
 
     res.status(200).json(posts);
   } catch (err) {
@@ -52,21 +55,22 @@ exports.createPost = async (req, res) => {
   try {
     const { clubId, title, description, category, price, quantity, images, tags, specifications } = req.body;
 
-    if (!title || !category || !clubId) {
-      return res.status(400).json({ msg: "Missing required fields" });
+    if (!title || !category) {
+      return res.status(400).json({ msg: "Missing required fields: title, category" });
     }
 
-    // Verify user is part of the club or is admin
-    const user = await User.findById(req.userId);
-    const club = await Club.findById(clubId);
+    if (clubId) {
+      const club = await Club.findById(clubId);
+      if (!club) return res.status(404).json({ msg: "Club not found" });
 
-    if (!club) return res.status(404).json({ msg: "Club not found" });
-    if (user.role !== "admin" && user.role !== "club") {
-      return res.status(403).json({ msg: "Only club members and admins can post" });
+      const user = await User.findById(req.userId);
+      if (user.role !== "admin" && user.role !== "club") {
+        return res.status(403).json({ msg: "Only club members and admins can post for a club" });
+      }
     }
 
     const post = await ClubPost.create({
-      clubId,
+      clubId: clubId || undefined,
       createdBy: req.userId,
       title,
       description,

@@ -12,6 +12,7 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 //this is Signup page
 exports.register = async (req, res) => {
   try {
+    console.log("REGISTER ATTEMPT:", req.body);
     const { name, email, password, role } = req.body;
 
     if (!name || !email || !password) {
