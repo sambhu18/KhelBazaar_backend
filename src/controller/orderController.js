@@ -52,7 +52,7 @@ exports.getOrderById = async (req, res) => {
 // Create order
 exports.createOrder = async (req, res) => {
   try {
-    const { items, shippingAddress, paymentMethod } = req.body;
+    const { items, shippingAddress, paymentMethod, total } = req.body;
 
     if (!items || items.length === 0) {
       return res.status(400).json({ msg: "Cart is empty" });
@@ -61,25 +61,43 @@ exports.createOrder = async (req, res) => {
     let totalPrice = 0;
     const orderItems = [];
 
-    // Calculate total and verify products
+    // Calculate total and build order items
     for (const item of items) {
-      const product = await Product.findById(item.productId);
-      if (!product) {
-        return res.status(404).json({ msg: `Product ${item.productId} not found` });
+      // Try to look up product from DB; fall back to cart item data if not found
+      let productTitle = item.title || "Unknown Product";
+      let productPrice = item.price || 0;
+      let productImage = item.image || item.images?.[0] || "";
+
+      if (item.productId) {
+        try {
+          const product = await Product.findById(item.productId);
+          if (product) {
+            productTitle = product.title;
+            productPrice = product.price;
+            productImage = product.images?.[0] || "";
+          }
+        } catch (_) {
+          // Use cart item values if product lookup fails
+        }
       }
 
-      const itemTotal = product.price * item.quantity;
+      const itemTotal = productPrice * (item.quantity || 1);
       totalPrice += itemTotal;
 
       orderItems.push({
-        productId: product._id,
-        title: product.title,
-        price: product.price,
-        quantity: item.quantity,
-        image: product.images[0] || "",
+        productId: item.productId || null,
+        title: productTitle,
+        price: productPrice,
+        quantity: item.quantity || 1,
+        image: productImage,
         size: item.size,
         customization: item.customization,
       });
+    }
+
+    // Use client-provided total if it covers tax + shipping (frontend calculates it)
+    if (total && total > totalPrice) {
+      totalPrice = total;
     }
 
     const order = await Order.create({
@@ -88,7 +106,7 @@ exports.createOrder = async (req, res) => {
       items: orderItems,
       totalPrice,
       shippingAddress,
-      paymentMethod,
+      paymentMethod: paymentMethod || "cod",
       status: "pending",
       paymentStatus: "pending",
     });

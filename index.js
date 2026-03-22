@@ -14,6 +14,7 @@ const reviewRouter = require("./src/router/reviewRouter");
 const rentalRouter = require("./src/router/rentalRouter");
 const recommendationRouter = require("./src/router/recommendationRouter");
 const clubsRouter = require("./src/router/clubsRouter");
+const esewaRouter = require("./src/router/esewaRouter");
 
 const app = express();
 app.use(express.json());
@@ -64,6 +65,7 @@ app.use("/api/clubs", clubsRouter);
 app.use("/api/reviews", reviewRouter);
 app.use("/api/rentals", rentalRouter);
 app.use("/api/recommendations", recommendationRouter);
+app.use("/api/esewa", esewaRouter);
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {

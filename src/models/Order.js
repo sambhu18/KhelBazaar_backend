@@ -27,9 +27,10 @@ const orderSchema = new Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ["stripe", "khalti", "cod"],
+    enum: ["esewa", "stripe", "khalti", "cod"],
     required: true,
   },
+  esewaTransactionCode: { type: String },
   paymentStatus: {
     type: String,
     enum: ["pending", "completed", "failed"],
