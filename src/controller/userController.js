@@ -596,7 +596,7 @@ exports.deleteAddress = async (req, res) => {
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ msg: "User not found" });
 
-    user.addresses.id(addressId).remove();
+    user.addresses.pull(addressId);
     await user.save();
 
     res.status(200).json({ msg: "Address deleted successfully", addresses: user.addresses });

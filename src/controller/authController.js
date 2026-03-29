@@ -223,8 +223,23 @@ exports.googleSignIn = async (req, res) => {
 
     if (!email || !email_verified) return res.status(400).json({ msg: 'Google account not verified' });
 
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      // Create user if they don't exist
+      const randomPassword = crypto.randomBytes(16).toString("hex");
+      const hashed = await hashPassword(randomPassword);
+      user = await User.create({
+        name,
+        email,
+        password: hashed,
+        role: "customer",
+        verified: true // Google accounts are implicitly verified
+      });
+    }
+
     const token = generateToken(user._id);
-    res.status(200).json({ msg: 'Login successful', token });
+    res.status(200).json({ msg: 'Login successful', token, role: user.role, userId: user._id });
   } catch (err) {
     console.error('GOOGLE SIGNIN ERROR:', err);
     res.status(500).json({ msg: 'Server error', error: err.message });

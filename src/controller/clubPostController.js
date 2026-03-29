@@ -50,10 +50,10 @@ exports.getPostById = async (req, res) => {
   }
 };
 
-// Create post (Club/Admin)
+// Create post (Club/Admin/Any logged-in user for community)
 exports.createPost = async (req, res) => {
   try {
-    const { clubId, title, description, category, price, quantity, images, tags, specifications } = req.body;
+    const { clubId, title, description, category, price, quantity, tags, specifications, postType } = req.body;
 
     if (!title || !category) {
       return res.status(400).json({ msg: "Missing required fields: title, category" });
@@ -69,17 +69,36 @@ exports.createPost = async (req, res) => {
       }
     }
 
+    // Extract image URLs from multer/Cloudinary uploaded files
+    let imageUrls = [];
+    if (req.files && req.files.length > 0) {
+      imageUrls = req.files.map(file => file.path || file.secure_url || file.url);
+    }
+
+    // Parse tags if it's a string
+    let parsedTags = tags || [];
+    if (typeof tags === 'string') {
+      parsedTags = tags.split(',').map(t => t.trim()).filter(Boolean);
+    }
+
+    // Parse specifications if it's a string
+    let parsedSpecs = specifications || {};
+    if (typeof specifications === 'string') {
+      try { parsedSpecs = JSON.parse(specifications); } catch (e) { parsedSpecs = {}; }
+    }
+
     const post = await ClubPost.create({
       clubId: clubId || undefined,
       createdBy: req.userId,
+      postType: postType || "announcement",
       title,
       description,
       category,
       price: price || 0,
       quantity: quantity || 1,
-      images: images || [],
-      tags: tags || [],
-      specifications: specifications || {},
+      images: imageUrls,
+      tags: parsedTags,
+      specifications: parsedSpecs,
       status: "active",
     });
 
@@ -107,17 +126,35 @@ exports.updatePost = async (req, res) => {
       return res.status(403).json({ msg: "Not authorized to update this post" });
     }
 
-    const { title, description, category, price, quantity, images, tags, specifications, status } = req.body;
+    const { title, description, category, price, quantity, tags, specifications, status, postType } = req.body;
 
     if (title) post.title = title;
     if (description) post.description = description;
     if (category) post.category = category;
+    if (postType) post.postType = postType;
     if (price !== undefined) post.price = price;
     if (quantity !== undefined) post.quantity = quantity;
-    if (images) post.images = images;
-    if (tags) post.tags = tags;
-    if (specifications) post.specifications = specifications;
     if (status) post.status = status;
+
+    // Handle image uploads from multer/Cloudinary
+    if (req.files && req.files.length > 0) {
+      const newImageUrls = req.files.map(file => file.path || file.secure_url || file.url);
+      post.images = [...post.images, ...newImageUrls];
+    }
+
+    // Parse tags if string
+    if (tags) {
+      post.tags = typeof tags === 'string' ? tags.split(',').map(t => t.trim()).filter(Boolean) : tags;
+    }
+
+    // Parse specifications if string
+    if (specifications) {
+      if (typeof specifications === 'string') {
+        try { post.specifications = JSON.parse(specifications); } catch (e) {}
+      } else {
+        post.specifications = specifications;
+      }
+    }
 
     post.updatedAt = new Date();
     await post.save();

@@ -93,6 +93,28 @@ exports.createOrder = async (req, res) => {
         size: item.size,
         customization: item.customization,
       });
+
+      // Stock Decrement Logic
+      if (item.productId) {
+        try {
+          const productToUpdate = await Product.findById(item.productId);
+          if (productToUpdate) {
+            const qty = item.quantity || 1;
+            if (item.size && productToUpdate.variants && productToUpdate.variants.length > 0) {
+              const variantIndex = productToUpdate.variants.findIndex(v => v.size === item.size);
+              if (variantIndex > -1) {
+                productToUpdate.variants[variantIndex].stock = Math.max(0, productToUpdate.variants[variantIndex].stock - qty);
+              }
+            } else {
+              productToUpdate.stock = Math.max(0, productToUpdate.stock - qty);
+            }
+            productToUpdate.purchases += qty;
+            await productToUpdate.save();
+          }
+        } catch (e) {
+          console.error("Failed to decrement stock:", e);
+        }
+      }
     }
 
     // Use client-provided total if it covers tax + shipping (frontend calculates it)

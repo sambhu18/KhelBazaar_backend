@@ -78,20 +78,37 @@ app.get("/api/health", (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error("Error:", err);
+  console.error("FULL ERROR STACK:", err.stack || err);
 
-  if (err instanceof multer.MulterError) {
+  // Default error response
+  let status = 500;
+  let message = "Something went wrong!";
+  let errorDetail = process.env.NODE_ENV === 'development' ? err.message : 'Internal server error';
+
+  if (err.name === 'MulterError') {
+    status = 400;
+    message = "File upload error";
+    errorDetail = err.message;
     if (err.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ msg: "File too large" });
+      errorDetail = "File size is too large. Max 5MB allowed.";
     }
-    if (err.code === 'LIMIT_FILE_COUNT') {
-      return res.status(400).json({ msg: "Too many files" });
-    }
+  } else if (err.message === "Only image files are allowed") {
+    status = 400;
+    message = "Invalid file type";
+    errorDetail = err.message;
+  } else if (err.name === 'ValidationError') {
+    status = 400;
+    message = "Validation failed";
+    errorDetail = Object.values(err.errors).map(val => val.message).join(', ');
+  } else if (err.name === 'MongoError' || err.name === 'BulkWriteError' || (err.code === 11000)) {
+     status = 400;
+     message = "Recording error / Validation failed";
+     errorDetail = err.code === 11000 ? "This record (e.g. title/slug) already exists." : err.message;
   }
 
-  res.status(500).json({
-    msg: "Something went wrong!",
-    error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
+  res.status(status).json({
+    msg: message,
+    error: errorDetail
   });
 });
 

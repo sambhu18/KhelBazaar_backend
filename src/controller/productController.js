@@ -213,7 +213,7 @@ exports.getProductById = async (req, res) => {
 };
 
 // Create product with enhanced features
-exports.createProduct = async (req, res) => {
+exports.createProduct = async (req, res, next) => {
   try {
     // Check if user is admin or approved vendor
     const user = await User.findById(req.userId);
@@ -277,51 +277,57 @@ exports.createProduct = async (req, res) => {
       }
     }
 
+    const safeParse = (str) => {
+      if (!str || str === 'undefined' || str === 'null') return null;
+      try { return JSON.parse(str); } catch (e) { return null; }
+    };
+
     const productData = {
       title,
       slug,
       description,
       shortDescription,
-      price: parseFloat(price),
+      price: parseFloat(price) || 0,
       originalPrice: originalPrice ? parseFloat(originalPrice) : null,
       currency: currency || 'NPR',
       images,
       variants: parsedVariants,
       categories: Array.isArray(categories) ? categories : (categories ? (typeof categories === 'string' ? categories.split(",").map(c => c.trim()) : [categories]) : []),
-      tags: tags ? tags.split(",").map((t) => t.trim()) : [],
+      tags: Array.isArray(tags) ? tags : (tags ? (typeof tags === 'string' ? tags.split(",").map(t => t.trim()) : [tags]) : []),
       brand,
       material,
       color,
-      weight: weight ? parseFloat(weight) : null,
-      dimensions: dimensions ? JSON.parse(dimensions) : null,
-      sizeChart: sizeChart ? JSON.parse(sizeChart) : null,
+      weight: parseFloat(weight) || null,
+      dimensions: safeParse(dimensions),
+      sizeChart: safeParse(sizeChart),
       isRentable: isRentable === 'true',
-      rentalPrice: rentalPrice ? JSON.parse(rentalPrice) : null,
+      rentalPrice: safeParse(rentalPrice),
       rentalDeposit: rentalDeposit ? parseFloat(rentalDeposit) : null,
       customizable: customizable === 'true',
-      customizationOptions: customizationOptions ? JSON.parse(customizationOptions) : null,
+      customizationOptions: safeParse(customizationOptions),
       metaTitle,
       metaDescription,
-      keywords: keywords ? keywords.split(",").map((k) => k.trim()) : [],
+      keywords: Array.isArray(keywords) ? keywords : (keywords ? (typeof keywords === 'string' ? keywords.split(",").map(k => k.trim()) : [keywords]) : []),
       sku,
       club: club || null,
       sizes: Array.isArray(sizes) ? sizes : (sizes ? (typeof sizes === 'string' ? sizes.split(",") : [sizes]) : []),
-      vendor: user.role === 'vendor' ? req.userId : null,
+      vendor: user._id, // Set the vendor to the user who created it
       status: user.role === 'admin' ? 'approved' : 'pending',
       newArrival: true
     };
+
+    console.log("FINAL PRODUCT DATA:", JSON.stringify(productData, null, 2));
 
     const product = await Product.create(productData);
 
     res.status(201).json({ msg: "Product created successfully", product });
   } catch (err) {
-    console.error("CREATE PRODUCT ERROR:", err);
-    res.status(500).json({ msg: "Server error", error: err.message });
+    next(err);
   }
 };
 
 // Update product with enhanced features
-exports.updateProduct = async (req, res) => {
+exports.updateProduct = async (req, res, next) => {
   try {
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ msg: "Product not found" });
@@ -394,8 +400,7 @@ exports.updateProduct = async (req, res) => {
 
     res.status(200).json({ msg: "Product updated successfully", product });
   } catch (err) {
-    console.error("UPDATE PRODUCT ERROR:", err);
-    res.status(500).json({ msg: "Server error", error: err.message });
+    next(err);
   }
 };
 
